@@ -1,5 +1,4 @@
 import cv2
-import numpy as np
 
 
 def load_image(img_path):
@@ -50,7 +49,7 @@ def resize_image(img, max_width=1000, max_height=1000):
 
 
 if __name__ == '__main__':
-    image_path = "../data/img046.jpg"
+    image_path = "../data/img041.jpg"
     img = load_image(image_path)
 
     while True:
@@ -62,13 +61,13 @@ if __name__ == '__main__':
 
         binary_img = apply_threshold(img, threshold_val)
 
-        resized_img = resize_image(binary_img)
+        resized_img = resize_image(binary_img) # It's not necessary to do this but I prefer for when the cv window appears
 
         cv2.imshow(f"Threshold: {threshold_val}", resized_img)
         key = cv2.waitKey(0)
 
         if key == ord('s'):
-            output_path = f"../results/thresholded_imgs/threshold_{threshold_val}.jpg"
+            output_path = f"../results/thresholded_imgs/threshold2_{threshold_val}.jpg"
             cv2.imwrite(output_path, binary_img)
             print(f"Saved image to {output_path}")
 
