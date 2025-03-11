@@ -1,5 +1,5 @@
 import cv2
-
+import numpy as np
 
 def load_image(img_path):
     """
@@ -10,21 +10,76 @@ def load_image(img_path):
         :raises ValueError: If the image can't be loaded
     """
 
-    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread(img_path)
     if img is None:
-        raise ValueError('Could not load image: {}'.format(img_path))
+        raise ValueError(f'Could not load image: {img_path}')
     return img
+
+
+def remove_rivers(img):
+    """
+    Remove blue rivers using color masking.
+
+    :param img: Input color image (BGR)
+    :return: Image with rivers removed
+    """
+    # Convert to HSV for better color segmentation
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+    # Define blue color range for rivers
+    lower_blue = np.array([100, 30, 30])
+    upper_blue = np.array([130, 255, 255])
+
+    # Create a mask for blue areas
+    mask = cv2.inRange(hsv, lower_blue, upper_blue)
+
+    # Dilate the mask to ensure complete removal of river areas
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.dilate(mask, kernel, iterations=1)
+
+    # Replace blue areas with white (background)
+    img[mask == 255] = [255, 255, 255]
+
+    return img
+
+
+def preprocess_image(img):
+    """
+    Preprocess the image: enhance contrast, remove noise, and convert to grayscale.
+
+    :param img: Input color image (BGR)
+    :return: Preprocessed grayscale image
+    """
+    # Enhance contrast
+    img_enhanced = cv2.convertScaleAbs(img, alpha=1.2, beta=0)
+
+    # Convert to grayscale
+    gray = cv2.cvtColor(img_enhanced, cv2.COLOR_BGR2GRAY)
+
+    # Apply Gaussian Blur to reduce noise
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+    return blurred
 
 
 def apply_threshold(img, threshold_val=150):
     """
-        Apply binary thresholding to an image.
+    Apply binary thresholding to an image with Otsu's method as an option.
 
-        :param img: Grayscale image as a NumPy array
-        :param threshold_val: Threshold value (0-255), default is 150 but user can input its own desired value when user runs preprocess.py
-        :return: Binary thresholded image
+    :param img: Grayscale image as a NumPy array
+    :param threshold_val: Threshold value (0-255), default is 150
+    :return: Binary thresholded image
     """
-    _, binary = cv2.threshold(img, threshold_val, 255, cv2.THRESH_BINARY)
+    # Use Otsu's method for automatic thresholding if threshold_val is 0
+    if threshold_val == 0:
+        _, binary = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    else:
+        _, binary = cv2.threshold(img, threshold_val, 255, cv2.THRESH_BINARY)
+
+    # Morphological opening to remove small noise (text, artifacts)
+    kernel = np.ones((3, 3), np.uint8)
+    binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel, iterations=1)
+
     return binary
 
 
@@ -52,22 +107,32 @@ if __name__ == '__main__':
     image_path = "../data/img041.jpg"
     img = load_image(image_path)
 
+    # Step 1: Remove rivers
+    img_no_rivers = remove_rivers(img)
+
+    # Step 2: Preprocess the image
+    img_preprocessed = preprocess_image(img_no_rivers)
+
     while True:
-        threshold_val = int(input('Threshold value: '))
+        threshold_val = int(input('Threshold value (0 for Otsu, -1 to exit): '))
 
         if threshold_val == -1:
             print("Exit")
             break
 
-        binary_img = apply_threshold(img, threshold_val)
+        # Apply thresholding
+        binary_img = apply_threshold(img_preprocessed, threshold_val)
 
-        resized_img = resize_image(binary_img) # It's not necessary to do this but I prefer for when the cv window appears
+        # Resize for display
+        resized_img = resize_image(binary_img)
 
+        # Show the binary image
         cv2.imshow(f"Threshold: {threshold_val}", resized_img)
+
         key = cv2.waitKey(0)
 
         if key == ord('s'):
-            output_path = f"../results/thresholded_imgs/threshold2_{threshold_val}.jpg"
+            output_path = f"../results/thresholded_imgs/thresholded2_{threshold_val}.jpg"
             cv2.imwrite(output_path, binary_img)
             print(f"Saved image to {output_path}")
 
