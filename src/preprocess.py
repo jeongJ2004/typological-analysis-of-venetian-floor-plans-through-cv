@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+import os
+
 
 def load_image(img_path):
     """
@@ -62,7 +64,7 @@ def preprocess_image(img):
     return blurred
 
 
-def apply_threshold(img, threshold_val=150):
+def apply_threshold(img, threshold_val=130):
     """
     Apply binary thresholding to an image with Otsu's method as an option.
 
@@ -103,37 +105,38 @@ def resize_image(img, max_width=1000, max_height=1000):
     return img
 
 
+def save_result(img, output_path):
+    cv2.imwrite(output_path, img)
+    print(f"Saved image to {output_path}")
+
+
+def process_image():
+    input_folder = "../data"
+    thresholded_folder = "../results/thresholded-imgs"
+    wall_extracted_folder = "../results/wall-extracted-imgs"
+    os.makedirs(thresholded_folder, exist_ok=True)
+    os.makedirs(wall_extracted_folder, exist_ok=True)
+
+    for filename in os.listdir(input_folder):
+        if filename.endswith(".jpg"):
+            img_path = os.path.join(input_folder, filename)
+            img = load_image(img_path)
+
+            #Step 1 : Remove rivers
+            img_no_rivers = remove_rivers(img)
+
+            #Step 2 : Preprocess image
+            img_preprocessed = preprocess_image(img_no_rivers)
+
+            #Step 3 : Apply thresholding
+            binary_img = apply_threshold(img_preprocessed)
+
+            #Step 4 : Save the thresholded images
+            thresholded_path = os.path.join(thresholded_folder, filename)
+            save_result(binary_img, thresholded_path)
+
+            print(f"Processed: {filename}")
+
+
 if __name__ == '__main__':
-    image_path = "../data/img041.jpg"
-    img = load_image(image_path)
-
-    # Step 1: Remove rivers
-    img_no_rivers = remove_rivers(img)
-
-    # Step 2: Preprocess the image
-    img_preprocessed = preprocess_image(img_no_rivers)
-
-    while True:
-        threshold_val = int(input('Threshold value (0 for Otsu, -1 to exit): '))
-
-        if threshold_val == -1:
-            print("Exit")
-            break
-
-        # Apply thresholding
-        binary_img = apply_threshold(img_preprocessed, threshold_val)
-
-        # Resize for display
-        resized_img = resize_image(binary_img)
-
-        # Show the binary image
-        cv2.imshow(f"Threshold: {threshold_val}", resized_img)
-
-        key = cv2.waitKey(0)
-
-        if key == ord('s'):
-            output_path = f"../results/thresholded_imgs/thresholded2_{threshold_val}.jpg"
-            cv2.imwrite(output_path, binary_img)
-            print(f"Saved image to {output_path}")
-
-        cv2.destroyAllWindows()
+    process_image()
