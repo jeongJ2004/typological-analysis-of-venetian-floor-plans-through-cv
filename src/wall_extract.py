@@ -1,63 +1,108 @@
 import cv2
 import numpy as np
-
+import os
 
 def load_image(img_path):
     """
-    Load a preprocessed binary (thresholded) image.
+    Load an image in grayscale or color mode.
 
-    :param img_path: Path to the preprocessed image
-    :return: NumPy array representing the binary image
-    :raises ValueError: If the image cannot be loaded
+    :param img_path: Path to the image file
+    :return: Image as a NumPy array
+    :raises ValueError: If the image can't be loaded
     """
-    img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread(img_path)
     if img is None:
         raise ValueError(f'Could not load image: {img_path}')
     return img
 
 
-def extract_walls(img):
+def remove_text_and_numbers(binary_img):
     """
-    Extracts walls from a binary image using improved edge detection and morphological operations.
+    Remove text and numbers from a binary floor plan image,
+    keeping only the walls (thick black lines).
 
-    :param img: Input binary image (already thresholded)
-    :return: Processed image with detected walls highlighted
+    :param binary_img: Binary image (walls are black, background is white)
+    :return: Cleaned image with only walls
     """
-    # Step 1: Apply Adaptive Threshold to Enhance Wall Contrast
-    _, binary = cv2.threshold(img, 110, 255, cv2.THRESH_BINARY)
+    # Invert image for morphological operations (walls become white)
+    inverted = cv2.bitwise_not(binary_img)
 
-    # Step 2: Apply Canny Edge Detection. (the lower threshold1 is, the better thin wall detection is. But it risks noise detection too)
-    edges = cv2.Canny(binary, threshold1=40, threshold2=160)
+    # Define kernels for morphological operations
+    # Horizontal kernel to remove horizontal text
+    h_kernel = np.ones((1, 4), np.uint8)
+    # Vertical kernel to remove vertical text
+    v_kernel = np.ones((4, 1), np.uint8)
+    # Small circular kernel to remove dots and small elements
+    small_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
 
-    # Step 3: Morphological Operations
-    kernel = np.ones((2, 2), np.uint8)  # Slightly stronger effect to capture thin walls
-    dilated = cv2.dilate(edges, kernel, iterations=1)  # Increase dilation to connect weak edges
-    eroded = cv2.erode(dilated, kernel, iterations=1)  # Reduce erosion to avoid losing structure
+    # First, perform opening to remove small elements (text, dots, etc.)
+    opened = cv2.morphologyEx(inverted, cv2.MORPH_OPEN, small_kernel, iterations=1)
 
-    # Step 4: Find Contours and Fill Walls
-    contours, _ = cv2.findContours(eroded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    wall_mask = np.zeros_like(img)
-    cv2.drawContours(wall_mask, contours, -1, (255), thickness=5)
+    # Remove thin horizontal and vertical lines (often text or small details)
+    h_opened = cv2.morphologyEx(opened, cv2.MORPH_OPEN, h_kernel, iterations=1)
+    v_opened = cv2.morphologyEx(h_opened, cv2.MORPH_OPEN, v_kernel, iterations=1)
 
-    # Step 5: Invert Colors (Make Walls Black, Background White)
-    # wall_mask = cv2.bitwise_not(wall_mask) # this will invert the black to white and white to black
+    # Apply area filtering to remove small connected components (likely text)
+    # Find all connected components
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(v_opened, connectivity=8)
 
-    return wall_mask
+    # Create output image
+    filtered = np.zeros_like(v_opened)
+
+    # Set minimum area threshold (adjust as needed based on your images)
+    min_area = 30  # Areas smaller than this will be removed
+
+    # Process each connected component
+    for i in range(1, num_labels):  # Start from 1 to skip background
+        area = stats[i, cv2.CC_STAT_AREA]
+
+        # Keep only components with area larger than threshold
+        if area > min_area:
+            component_mask = (labels == i).astype(np.uint8) * 255
+            filtered = cv2.bitwise_or(filtered, component_mask)
+
+    # Invert back to original format (walls are black)
+    result = cv2.bitwise_not(filtered)
+
+    return result
+
+def save_result(img, output_path):
+    """
+    Save the processed image.
+
+    :param img: Processed image
+    :param output_path: Path to save the image
+    """
+    cv2.imwrite(output_path, img)
+    print(f"Saved image to {output_path}")
+
+
+def process_wall_extraction():
+    thresholded_folder = "../results/thresholded-imgs"
+    wall_extracted_folder = "../results/wall-extracted-imgs"
+    os.makedirs(wall_extracted_folder, exist_ok=True)
+
+    for filename in os.listdir(thresholded_folder):
+        if filename.endswith(".jpg"):
+            input_path = os.path.join(thresholded_folder, filename)
+            binary_img = load_image(input_path)
+
+            # Convert to grayscale if it's not already
+            if len(binary_img.shape) > 2:
+                binary_img = cv2.cvtColor(binary_img, cv2.COLOR_BGR2GRAY)
+
+            # Ensure binary image (0 or 255)
+            _, binary_img = cv2.threshold(binary_img, 128, 255, cv2.THRESH_BINARY)
+
+            # Remove text and numbers
+            walls_only = remove_text_and_numbers(binary_img)
+
+            # Save the result
+            output_path = os.path.join(wall_extracted_folder, filename)
+            save_result(walls_only, output_path)
+
+            print(f"Processed: {filename}")
 
 
 if __name__ == '__main__':
-    image_path = "../results/thresholded_imgs/threshold_110.jpg"
-    img = load_image(image_path)
-
-    # Extract walls from the thresholded image
-    wall_img = extract_walls(img)
-
-    # Save and display the extracted walls
-    output_path = image_path.replace(".jpg", "_walls.jpg")
-    cv2.imwrite(output_path, wall_img)
-    print(f"Saved wall extraction result to {output_path}")
-
-    # Show the detected walls
-    cv2.imshow("Extracted Walls", wall_img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    process_wall_extraction()
