@@ -33,7 +33,9 @@ def remove_text_and_numbers(binary_img):
     # Vertical kernel to remove vertical text
     v_kernel = np.ones((4, 1), np.uint8)
     # Small circular kernel to remove dots and small elements
-    small_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    small_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)) # The kernel defines a neighborhood around each pixel.
+                                                                              # For an ellipse, it’s roughly circular, with 1s in the middle and 0s at the edges
+                                                                              # (approximated within a 3x3 grid).
 
     # First, perform opening to remove small elements (text, dots, etc.)
     opened = cv2.morphologyEx(inverted, cv2.MORPH_OPEN, small_kernel, iterations=1)
@@ -44,7 +46,7 @@ def remove_text_and_numbers(binary_img):
 
     # Apply area filtering to remove small connected components (likely text)
     # Find all connected components
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(v_opened, connectivity=8)
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(v_opened, connectivity=8) #connectivity=8 means it checks the 8 sides around itself (left, right, up, down, diagonals)
 
     # Create output image
     filtered = np.zeros_like(v_opened)
@@ -52,9 +54,20 @@ def remove_text_and_numbers(binary_img):
     # Set minimum area threshold (adjust as needed based on your images)
     min_area = 30  # Areas smaller than this will be removed
 
+    '''
+    Loop : Checks each component (skips background, i=0).
+    Area check : If area > 30, it’s a wall (not text).
+    component_mask :
+        (labels == i): Boolean array (True where pixel belongs to component i).
+        .astype(np.uint8) * 255: Converts to 0/255 (black/white) binary mask.
+        Result : A mask where only this component is white.
+    cv2.bitwise_or(filtered, component_mask) :
+        OR operation : Adds the white component to filtered. If a pixel is white in either filtered or component_mask, it stays white.
+    '''
+
     # Process each connected component
     for i in range(1, num_labels):  # Start from 1 to skip background
-        area = stats[i, cv2.CC_STAT_AREA]
+        area = stats[i, cv2.CC_STAT_AREA] # extracts the size of each white region. If it’s less than min_area (30 pixels), it’s considered noise/text and discarded.
 
         # Keep only components with area larger than threshold
         if area > min_area:

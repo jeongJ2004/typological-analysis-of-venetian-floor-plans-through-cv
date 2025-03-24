@@ -25,7 +25,7 @@ def remove_rivers(img):
     :param img: Input color image (BGR)
     :return: Image with rivers removed
     """
-    # Convert to HSV for better color segmentation
+    # Convert to HSV for better color segmentation -> Hue Saturation Value
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     # Define blue color range for rivers
