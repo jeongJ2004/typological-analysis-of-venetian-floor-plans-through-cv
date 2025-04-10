@@ -29,7 +29,7 @@ aug_id = 0  # ID counter for saving augmented images
 for img_name, label_name in tqdm(zip(patch_files, label_files), total=len(patch_files)):
     # Load input image and corresponding label
     img = cv2.imread(os.path.join(input_dir, img_name))
-    label = cv2.imread(os.path.join(label_dir, label_name))
+    label = cv2.imread(os.path.join(label_dir, label_name), cv2.IMREAD_UNCHANGED)
 
     # Save the original image and label (optional)
     cv2.imwrite(os.path.join(output_input_dir, f"patch_{aug_id:04d}.jpg"), img)
