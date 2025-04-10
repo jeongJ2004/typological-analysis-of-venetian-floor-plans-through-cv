@@ -1,7 +1,9 @@
 import cv2
 import numpy as np
 import os
+import easyocr
 
+reader = easyocr.Reader(['en'], gpu=False)
 
 def load_image(img_path):
     """
@@ -44,39 +46,118 @@ def remove_rivers(img):
 
     return img
 
+def remove_text_with_easyocr(img_color):
+    """
+    Use EasyOCR to remove detected text from a color image,
+    but filter out false positives (e.g., thin walls).
 
-def preprocess_image(img):
+    :param img_color: BGR image
+    :return: Image with text removed
+    """
+    results = reader.readtext(img_color)
+
+    for (bbox, text, conf) in results:
+        pts = np.array(bbox).astype(np.int32)
+        x_min = min(p[0] for p in pts)
+        x_max = max(p[0] for p in pts)
+        y_min = min(p[1] for p in pts)
+        y_max = max(p[1] for p in pts)
+
+        width = x_max - x_min
+        height = y_max - y_min
+        aspect_ratio = max(width / (height + 1e-5), height / (width + 1e-5))
+
+        # filter 1 : ignore small areas
+        if width < 3 or height < 3:
+            continue
+
+        # filter 2 : ignore the long line (because maybe it's a wall)
+        if aspect_ratio > 20:
+            continue
+
+        # filter 3 : ignore low confidence
+        if conf < 0.3:
+            continue
+
+        cv2.rectangle(img_color, (x_min, y_min), (x_max, y_max), (255, 255, 255), -1)
+
+    return img_color
+
+
+
+def preprocess_image(img, center_margin=330):
     """
     Preprocess the image: enhance contrast, remove noise, and convert to grayscale.
 
     :param img: Input color image (BGR)
     :return: Preprocessed grayscale image
     """
-    # Enhance contrast
-    img_enhanced = cv2.convertScaleAbs(img, alpha=1.2, beta=0)
-
+    img_no_text = remove_text_with_easyocr(img)
     # Convert to grayscale
-    gray = cv2.cvtColor(img_enhanced, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(img_no_text, cv2.COLOR_BGR2GRAY)
+    # Enhance contrast
+    gray_enhanced = cv2.convertScaleAbs(gray, alpha=1.2, beta=0)
+
+    # Create a mask for the center region
+    height, width = gray.shape
+    mask = np.zeros((height, width), dtype=np.uint8)
+    center_x_start = width // 2 - center_margin
+    center_x_end = width // 2 + center_margin
+
+    center_x_start = max(0, center_x_start)
+    center_x_end = min(width, center_x_end)
+
+    mask[:, center_x_start:center_x_end] = 255
+
+    # Apply brightness correction to the center region
+    center_region = gray_enhanced.copy()
+    center_region = cv2.convertScaleAbs(center_region, alpha=1.5, beta=50)  # Increase brightness in the center
+
+    # Combine the brightness-corrected center with the original image
+    result = gray_enhanced.copy()
+    result[mask == 255] = center_region[mask == 255]
 
     # Apply Gaussian Blur to reduce noise
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    blurred = cv2.GaussianBlur(result, (5, 5), 0)
 
     return blurred
 
 
-def apply_threshold(img, threshold_val=130):
+def apply_threshold(img, center_margin=330, center_threshold=180, default_threshold=130):
     """
-    Apply binary thresholding to an image with Otsu's method as an option.
+    Apply partial thresholding: higher threshold in the center, default threshold elsewhere.
 
     :param img: Grayscale image as a NumPy array
-    :param threshold_val: Threshold value (0-255), default is 150
+    :param center_margin: Margin in pixels to define the center region
+    :param center_threshold: Threshold value for the center region
+    :param default_threshold: Threshold value for the rest of the image
     :return: Binary thresholded image
     """
-    # Use Otsu's method for automatic thresholding if threshold_val is 0
-    if threshold_val == 0:
-        _, binary = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    else:
-        _, binary = cv2.threshold(img, threshold_val, 255, cv2.THRESH_BINARY)
+    height, width = img.shape
+
+    # Create a mask for the center region
+    mask = np.zeros((height, width), dtype=np.uint8)
+
+    # Define the center region (considering the margin)
+    center_x_start = width // 2 - center_margin
+    center_x_end = width // 2 + center_margin
+
+    # Ensure the center region stays within image bounds
+    center_x_start = max(0, center_x_start)
+    center_x_end = min(width, center_x_end)
+
+    # Set the center region to 255 in the mask
+    mask[:, center_x_start:center_x_end] = 255
+
+    # Apply thresholding to the entire image with the default threshold
+    _, binary_default = cv2.threshold(img, default_threshold, 255, cv2.THRESH_BINARY)
+
+    # Apply thresholding to the center region with the higher threshold
+    _, binary_center = cv2.threshold(img, center_threshold, 255, cv2.THRESH_BINARY)
+
+    # Combine the results: use center threshold in the center, default elsewhere
+    binary = binary_default.copy()
+    binary[mask == 255] = binary_center[mask == 255]
 
     # Morphological opening to remove small noise (text, artifacts)
     kernel = np.ones((3, 3), np.uint8)
