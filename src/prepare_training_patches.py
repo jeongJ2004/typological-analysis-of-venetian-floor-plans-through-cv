@@ -37,7 +37,7 @@ def clean_gt_image_kdtree(image_path, save_path):
     # Convert to BGR and save
     corrected_bgr = cv2.cvtColor(corrected_colors.astype(np.uint8), cv2.COLOR_RGB2BGR)
     cv2.imwrite(save_path, corrected_bgr)
-    print(f"✅ Cleaned GT saved to: {save_path}")
+    print(f"Cleaned GT saved to: {save_path}")
 
 
 def extract_patches(input_img_path, label_img_path,
@@ -58,7 +58,7 @@ def extract_patches(input_img_path, label_img_path,
 
     # Check if the images were loaded successfully
     if input_img is None or label_img is None:
-        raise ValueError("❌ Error: One or both images could not be loaded.")
+        raise ValueError("Error: One or both images could not be loaded.")
 
     # Resize both input and label image to the same size (fixed)
     input_resized = cv2.resize(input_img, (resize_width, resize_height), interpolation=cv2.INTER_AREA)
@@ -89,7 +89,7 @@ def extract_patches(input_img_path, label_img_path,
             patch_id += 1  # Increment patch counter
 
     # Print the total number of saved patches
-    print(f"✅ Total {patch_id} patches saved.")
+    print(f"Total {patch_id} patches saved.")
 
 
 # ====== USAGE ======
