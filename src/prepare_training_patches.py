@@ -96,14 +96,14 @@ def extract_patches(input_img_path, label_img_path,
 
 # Step 1: Clean GT
 clean_gt_image_kdtree(
-    image_path="../data/gt038.png",
-    save_path="../data/gt038_cleaned.png"
+    image_path="../data/groundtruth/gt038.png",
+    save_path="../data/groundtruth/gt038_cleaned.png"
 )
 
 # Step 2: Extract patches from cleaned GT
 extract_patches(
-    input_img_path="../data/img038.jpg",
-    label_img_path="../data/gt038_cleaned.png",
+    input_img_path="../data/initial_attempts/img038.jpg",
+    label_img_path="../data/groundtruth/gt038_cleaned.png",
     out_input_dir="patches_inputs",
     out_label_dir="patches_labels",
     resize_width=2707,
