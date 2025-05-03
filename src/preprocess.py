@@ -45,56 +45,56 @@ def remove_rivers(img):
     img[mask == 255] = [255, 255, 255]
 
     return img
+#
+# def remove_text_with_easyocr(img_color):
+#     """
+#     Use EasyOCR to remove detected text from a color image,
+#     but filter out false positives (e.g., thin walls).
+#
+#     :param img_color: BGR image
+#     :return: Image with text removed
+#     """
+#     results = reader.readtext(img_color)
+#
+#     for (bbox, text, conf) in results:
+#         pts = np.array(bbox).astype(np.int32)
+#         x_min = min(p[0] for p in pts)
+#         x_max = max(p[0] for p in pts)
+#         y_min = min(p[1] for p in pts)
+#         y_max = max(p[1] for p in pts)
+#
+#         width = x_max - x_min
+#         height = y_max - y_min
+#         aspect_ratio = max(width / (height + 1e-5), height / (width + 1e-5))
+#
+#         # filter 1 : ignore small areas
+#         if width < 3 or height < 3:
+#             continue
+#
+#         # filter 2 : ignore the long line (because maybe it's a wall)
+#         if aspect_ratio > 20:
+#             continue
+#
+#         # filter 3 : ignore low confidence
+#         if conf < 0.3:
+#             continue
+#
+#         cv2.rectangle(img_color, (x_min, y_min), (x_max, y_max), (255, 255, 255), -1)
+#
+#     return img_color
 
-def remove_text_with_easyocr(img_color):
-    """
-    Use EasyOCR to remove detected text from a color image,
-    but filter out false positives (e.g., thin walls).
-
-    :param img_color: BGR image
-    :return: Image with text removed
-    """
-    results = reader.readtext(img_color)
-
-    for (bbox, text, conf) in results:
-        pts = np.array(bbox).astype(np.int32)
-        x_min = min(p[0] for p in pts)
-        x_max = max(p[0] for p in pts)
-        y_min = min(p[1] for p in pts)
-        y_max = max(p[1] for p in pts)
-
-        width = x_max - x_min
-        height = y_max - y_min
-        aspect_ratio = max(width / (height + 1e-5), height / (width + 1e-5))
-
-        # filter 1 : ignore small areas
-        if width < 3 or height < 3:
-            continue
-
-        # filter 2 : ignore the long line (because maybe it's a wall)
-        if aspect_ratio > 20:
-            continue
-
-        # filter 3 : ignore low confidence
-        if conf < 0.3:
-            continue
-
-        cv2.rectangle(img_color, (x_min, y_min), (x_max, y_max), (255, 255, 255), -1)
-
-    return img_color
 
 
-
-def preprocess_image(img, center_margin=330):
+def preprocess_image(img, center_margin=0):
     """
     Preprocess the image: enhance contrast, remove noise, and convert to grayscale.
 
     :param img: Input color image (BGR)
     :return: Preprocessed grayscale image
     """
-    img_no_text = remove_text_with_easyocr(img)
+    # img_no_text = remove_text_with_easyocr(img)
     # Convert to grayscale
-    gray = cv2.cvtColor(img_no_text, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # Enhance contrast
     gray_enhanced = cv2.convertScaleAbs(gray, alpha=1.2, beta=0)
 
@@ -123,7 +123,7 @@ def preprocess_image(img, center_margin=330):
     return blurred
 
 
-def apply_threshold(img, center_margin=330, center_threshold=180, default_threshold=130):
+def apply_threshold(img, center_margin=0, center_threshold=160, default_threshold=130):
     """
     Apply partial thresholding: higher threshold in the center, default threshold elsewhere.
 
@@ -192,9 +192,9 @@ def save_result(img, output_path):
 
 
 def process_image():
-    input_folder = "../data"
-    thresholded_folder = "../results/thresholded-imgs"
-    wall_extracted_folder = "../results/wall-extracted-imgs"
+    input_folder = "../data/FLOORPLANS_Cut"
+    thresholded_folder = "../results/thresholded-imgs-cut"
+    wall_extracted_folder = "../results/wall-extracted-imgs-cut"
     os.makedirs(thresholded_folder, exist_ok=True)
     os.makedirs(wall_extracted_folder, exist_ok=True)
 
