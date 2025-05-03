@@ -91,8 +91,8 @@ def save_result(img, output_path):
 
 
 def process_wall_extraction():
-    thresholded_folder = "../results/thresholded-imgs"
-    wall_extracted_folder = "../results/wall-extracted-imgs"
+    thresholded_folder = "../results/thresholded-imgs-cut"
+    wall_extracted_folder = "../results/wall-extracted-imgs-cut"
     os.makedirs(wall_extracted_folder, exist_ok=True)
 
     for filename in os.listdir(thresholded_folder):
