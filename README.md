@@ -64,3 +64,6 @@ Find the full report and LaTeX sources in the report/ folder.
 typological-analysis-of-venetian-floor-plans-through-cv - Jaeyi Jeong  
 Copyright (c) 2025 EPFL  
 This program is licensed under the terms of the MIT license.
+
+## Data & Result 
+It is stored in Jaeyi Jeong's Google Drive : https://drive.google.com/drive/folders/1IcfwlD5aW1YeNYRYpWzDi-JFGjIv37vV?usp=drive_link
