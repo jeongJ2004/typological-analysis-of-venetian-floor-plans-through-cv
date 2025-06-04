@@ -4,10 +4,10 @@ import albumentations as A
 from tqdm import tqdm
 
 # ====== Config ======
-input_dir = "patches_inputs"
-label_dir = "patches_labels"
-output_input_dir = "aug_inputs"
-output_label_dir = "aug_labels"
+input_dir = "patches_inputs2"
+label_dir = "patches_labels2"
+output_input_dir = "aug_inputs2"
+output_label_dir = "aug_labels2"
 os.makedirs(output_input_dir, exist_ok=True)
 os.makedirs(output_label_dir, exist_ok=True)
 
@@ -32,8 +32,8 @@ for img_name, label_name in tqdm(zip(patch_files, label_files), total=len(patch_
     label = cv2.imread(os.path.join(label_dir, label_name), cv2.IMREAD_UNCHANGED)
 
     # Save the original image and label (optional)
-    cv2.imwrite(os.path.join(output_input_dir, f"patch_{aug_id:04d}.jpg"), img)
-    cv2.imwrite(os.path.join(output_label_dir, f"patch_{aug_id:04d}.png"), label)
+    cv2.imwrite(os.path.join(output_input_dir, f"patch2_{aug_id:04d}.jpg"), img)
+    cv2.imwrite(os.path.join(output_label_dir, f"patch2_{aug_id:04d}.png"), label)
     aug_id += 1
 
     # Apply augmentations N times per image
@@ -43,8 +43,8 @@ for img_name, label_name in tqdm(zip(patch_files, label_files), total=len(patch_
         aug_label = augmented["label"]
 
         # Save the augmented image and label
-        cv2.imwrite(os.path.join(output_input_dir, f"patch_{aug_id:04d}.jpg"), aug_img)
-        cv2.imwrite(os.path.join(output_label_dir, f"patch_{aug_id:04d}.png"), aug_label)
+        cv2.imwrite(os.path.join(output_input_dir, f"patch2_{aug_id:04d}.jpg"), aug_img)
+        cv2.imwrite(os.path.join(output_label_dir, f"patch2_{aug_id:04d}.png"), aug_label)
         aug_id += 1
 
-print(f"Done!!!!!!!!!! Total of {aug_id} patches generated.")
+print(f"Done! Total of {aug_id} patches generated.")
