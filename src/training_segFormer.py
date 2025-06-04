@@ -20,7 +20,7 @@ import os
 
 """
 NOTE:
-This project uses the pretrained model 'nvidia/segformer-b0-finetuned-ade-512-512' under the NVIDIA Source Code License.
+This project uses the pretrained model 'nvidia/segformer-b4-finetuned-ade-512-512' under the NVIDIA Source Code License.
 This license allows use for non-commercial research or evaluation purposes only.
 See: https://github.com/NVIDIA/semantic-segmentation/blob/main/LICENSE
 """
@@ -124,7 +124,7 @@ val_dataset = FloorPlanDataset(val_imgs, val_labels, processor)  # Create valida
 
 # 6. Load Model
 model = SegformerForSemanticSegmentation.from_pretrained(
-    "nvidia/segformer-b0-finetuned-ade-512-512",  # Load pretrained Segformer model
+    "nvidia/segformer-b4-finetuned-ade-512-512",  # Load pretrained Segformer model
     num_labels=num_classes,  # Set number of output classes to 4
     ignore_mismatched_sizes=True  # Ignore size mismatches between pretrained and new head
 )
@@ -155,7 +155,7 @@ class WeightedLossTrainer(Trainer):
         logits = outputs.logits  # Get raw predictions (logits)
 
         # Define class weights to balance loss (higher weights for rare classes)
-        weights = torch.tensor([0.3, 1.2, 20.0, 13.1]).to(logits.device)
+        weights = torch.tensor([0.2, 1.0, 60.0, 50.0]).to(logits.device)
 
         # Resize labels to match logits size (64x64 from 256x256)
         labels_resized = torch.nn.functional.interpolate(
@@ -175,7 +175,7 @@ training_args = TrainingArguments(
     per_device_train_batch_size=4,  # Batch size for training
     per_device_eval_batch_size=2,  # Batch size for evaluation
     num_train_epochs=50,  # Number of training epochs
-    evaluation_strategy="epoch",  # Evaluate after each epoch
+    eval_strategy="epoch",  # Evaluate after each epoch
     save_strategy="epoch",  # Save model after each epoch
     logging_strategy="epoch",  # Log metrics after each epoch
     learning_rate=5e-5,  # Learning rate for optimization
